@@ -99,6 +99,6 @@ var newsWidget = new function () {
 
 	return {
 		init: initWidget,
-		start:
+		start: beginUpdateData
 	}
 };
