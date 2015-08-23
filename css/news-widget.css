@@ -1,0 +1,30 @@
+.widget {
+ 	padding: 2px;
+	font-family: Arial, Tahoma, sans-serif;
+	width: 500px;
+}
+
+.widget-header {
+	background-color: #555;
+	color: #eee;
+	padding: 3px 5px;
+}
+
+.widget-content {
+
+}
+
+.tweet {
+	background-color: #eee;
+	color: #555;
+	margin-top: 2px;
+	padding: 3px 5px;
+}
+
+.tweet:first-child {
+	margin-top: none;
+}
+
+.tweet-author-name {
+	font-weight: bold;
+}

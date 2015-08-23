@@ -1,8 +1,10 @@
 var newsWidget = new function () {
-	var intervalId;
+	var intervalId,
+		DEFAULT_CONTAINER_SELECTOR = '.news-widget-container',
+		widgetData = {
+			tweetIdLib: []
+		};
 
-	var DEFAULT_CONTAINER_SELECTOR = '.news-widget-container';
-	var widgetData = {};
 	var XMLHttpFactories = [
 		function () {
 			return new XMLHttpRequest()
@@ -36,9 +38,9 @@ var newsWidget = new function () {
 		return Object.prototype.toString.call(obj);
 	}
 
-	function isObject(obj) {
+/*	function isObject(obj) {
 		return toClass(obj) === '[object Object]';
-	}
+	}*/
 
 	function createXMLHTTPObject() {
 		var xmlhttp = false;
@@ -79,36 +81,83 @@ var newsWidget = new function () {
 		sendRequest(urlWithParams, finishUpdateIteration);
 	}
 
+	function saveTweetId(id) {
+		if (widgetData.tweetIdLib.length == widgetData.limit) {
+			widgetData.tweetIdLib.pop();
+		}
+		widgetData.tweetIdLib.unshift(id);
+	}
+
+
+	function isIdExists(id) {
+		return widgetData.tweetIdLib.indexOf(id) >= 0;
+	}
+
+	function getNewTweetHTML (tweetData) {
+		var tweetHTML = document.createElement('div');
+		tweetHTML.className = 'tweet';
+		var tweetAuthorNameHTML = document.createElement('div');
+		tweetAuthorNameHTML.className = 'tweet-author-name';
+		tweetAuthorNameHTML.innerHTML = tweetData.user.name;
+		var tweetTextHTML = document.createElement('div');
+		tweetTextHTML.className = 'tweet-text';
+		tweetTextHTML.innerHTML = tweetData.text;
+
+		tweetHTML.appendChild(tweetAuthorNameHTML);
+		tweetHTML.appendChild(tweetTextHTML);
+
+		return tweetHTML;
+	}
+	
+	function treatResponseData(responseData) {
+		var responseLen = responseData.length;
+		var newTweetsHTML = document.createDocumentFragment();
+		for (var i = 0; i < responseLen; i++) {
+			var id = responseData[i].id;
+			if (!isIdExists(id)) {
+				saveTweetId(id);
+				newTweetsHTML.appendChild(getNewTweetHTML(responseData[i]));
+			}
+		}
+
+		var newTweetsLen = newTweetsHTML.childNodes.length;
+		if(newTweetsLen) {
+			var widgetContentElement = widgetData.html.querySelector('.widget-content');
+			for (var j =0; j < newTweetsLen; j++){
+				var lastChild = widgetContentElement.lastChild;
+				if (lastChild){
+					lastChild.remove();
+				} else break;
+			}
+			widgetContentElement.appendChild(newTweetsHTML);
+		}
+	}
+
 	function finishUpdateIteration(requestObj) {
-		var response = JSON.parse(requestObj.response);
-		var newsTweet = document.createElement('div');
-		newsTweet.className = 'news-tweet';
-		var newsTweetAuthorName = document.createElement('div');
-		newsTweetAuthorName.className = 'news-tweet-author-name';
-		newsTweetAuthorName.innerHTML = response[0].user.name;
-		var newsTweetText = document.createElement('div');
-		newsTweetText.className = 'news-tweet-text';
-		newsTweetText.innerHTML = response[0].text;
+		var responceData = JSON.parse(requestObj.response);
+		if (!responceData || !Array.isArray(responceData) || !responceData.length) return;
+		widgetData.responseData = responceData;
 
-		newsTweet.appendChild(newsTweetAuthorName);
-		newsTweet.appendChild(newsTweetText);
-
-		// TODO real model for html
-		widgetData.html.querySelector('.widget-content').appendChild(newsTweet);
+		treatResponseData(widgetData.responseData);
 	}
 
 	function startUpdating(url, limit, interval) {
-		beginUpdateIteration(url, limit);
+		widgetData.url = url;
+		widgetData.limit = limit;
+		widgetData.interval = interval;
+
+		beginUpdateIteration(widgetData.url, widgetData.limit);
 		intervalId = setInterval(function () {
-			beginUpdateIteration(url, limit);
-		}, interval);
+			beginUpdateIteration(widgetData.url, widgetData.limit);
+		}, widgetData.interval);
+		//TODO: interval lib
 	}
 
-	function getWidgetData() {
+/*	function getWidgetData() {
 		return widgetData;
-	}
+	}*/
 
-	function getNewWidgetHTML () {
+	function getWidgetTemplate() {
 		var widgetHTML = document.createElement('div');
 		widgetHTML.className = 'widget';
 		var widgetHeader = document.createElement('div');
@@ -126,7 +175,7 @@ var newsWidget = new function () {
 	function createWidget(container) {
 		if (!isNode(container)) return;
 		widgetData.container = container;
-		widgetData.html = getNewWidgetHTML();
+		widgetData.html = getWidgetTemplate();
 		container.appendChild(widgetData.html);
 	}
 
@@ -145,7 +194,7 @@ var newsWidget = new function () {
 
 	return {
 		init: initWidget,
-		start: startUpdating,
-		widgetData: getWidgetData()
+		start: startUpdating/*,
+		widgetData: getWidgetData()*/
 	}
 };
